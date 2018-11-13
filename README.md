@@ -8,7 +8,7 @@ Slight Modifications:
   - Modified learning rates
 
 
-![alt text](https://raw.githubusercontent.com/manicman1999/BicycleGAN-Keras/Results/i48.png)
+![alt text](https://imgur.com/a/xfTwtDq)
 Results
 
 (1 x Labels, 1 x Ground Truth, 6 x Generated Image)
