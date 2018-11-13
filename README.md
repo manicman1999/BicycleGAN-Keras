@@ -8,7 +8,7 @@ Slight Modifications:
   - Modified learning rates
 
 
-![alt text](https://i.imgur.com/4P7Rcmp.jpg)
+![alt text](https://i.imgur.com/Nkda0LZ.jpg)
 Results
 
 (1 x Labels, 1 x Ground Truth, 6 x Generated Image)
