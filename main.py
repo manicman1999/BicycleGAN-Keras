@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Sep 17 14:17:32 2018
 
-@author: Matthew
+@author: Matthew Mann
 
 DomainA / DomainB = Images[] - Pairs
 DomainAs / DomainBs = Amages[] - Non-Pairs
@@ -33,30 +32,16 @@ def zero():
 def one():
     return np.random.uniform(0.99, 1.0, size = [64])
 
-def noise_bernoulli(n):
-    p = 0.5;
-    return np.round(np.random.uniform(0.0, 0.5, size = [n, nlev]) + (p / 2))
-
 def noise(n):
     return np.random.normal(0, 1, size = [n, nlev])
 
-#def adjust_hue(image, amount):
-#    t0 = Image.fromarray(np.uint8(image*255))
-#    t1 = t0.convert('HSV')
-#    t2 = np.array(t1, dtype='float32')
-#    t2 = t2 / 255
-#    t2[...,0] = (t2[...,0] + amount) % 1
-#    t3 = Image.fromarray(np.uint8(t2*255), mode = "HSV")
-#    t4 = np.array(t3.convert('RGB'), dtype='float32') / 255
-#    
-#    return t4
 
 
 
 #Import Images
 print("Importing Images...")
 
-#Pairs
+#Import Pairs
 ImagesA = []
 ImagesB = []
 n_images = 606
@@ -75,7 +60,7 @@ for n in range(1, n_images + 1):
     ImagesB.append(np.flip(ImagesB[-1], 1))
 
 
-#Non-paired
+#Import Non-paired
 AmagesA = []
 AmagesB = []
 nimA = 606
@@ -98,15 +83,6 @@ for n in range(1, nimB + 1):
     AmagesB.append(tempB1 / 255)
     
     AmagesB.append(np.flip(AmagesB[-1], 1))
-    
-    
-#def change_all_B():
-#    
-#    for ima in range(len(ImagesB)):
-#        ImagesB[ima] = adjust_hue(ImagesB[ima], random.random())
-#    
-#    for ima in range(len(AmagesB)):
-#        AmagesB[ima] = adjust_hue(AmagesB[ima], random.random())
 
 
 #Keras Imports
@@ -146,18 +122,6 @@ def deconv(input1, input2, filters, drop = 0):
     
     return con
 
-def conv_p(input_tensor, filters, kernel_size, strides, bn = True, drop = 0):
-    
-    co = Conv2D(filters = filters, kernel_size = kernel_size, strides = strides, padding = 'same')(input_tensor)
-    ac = LeakyReLU(0.2)(co)
-    
-    if bn:
-        ac = BatchNormalization(momentum = 0.75)(ac)
-        
-    if drop > 0:
-        ac = Dropout(drop)(ac)
-    
-    return ac
 
 
 #Define The Actual Model Class
@@ -523,11 +487,13 @@ class BicycleGAN(object):
         
     def train(self, batch = 16):
         
+        #Train and Get Losses
         (al, bl) = self.train_dis(batch)
         cl = self.train_ad(batch)
         (dl, nl) = self.train_vae(batch)
         el = self.train_zd(batch)
         
+        #Every 20 Steps Display Info
         if self.GAN.steps % 20 == 0:
             ti = round((time.clock() - self.lastblip) * 100.0) / 100.0
             print("\n\nRound " + str(self.GAN.steps) + ":")
@@ -540,10 +506,12 @@ class BicycleGAN(object):
             print("Time::: " + str(ti))
             self.lastblip = time.clock()
         
+        #Save Every 500 steps
         if self.GAN.steps % 500 == 0:
             self.save(floor(self.GAN.steps / 10000))
             #self.evaluate()
-            
+        
+        #Re-Compile (Update Learning Rate) Every 10k Steps
         if self.GAN.steps % 10000 == 0:
             self.GAN.AM = None
             self.GAN.DM = None
@@ -558,7 +526,7 @@ class BicycleGAN(object):
         
         return True
     
-    def train_dis(self, batch):
+    def train_dis(self, batch): #Train Discriminator on Real, then Generated Images
         
         number = max(1, int(batch / 2))
         
@@ -597,7 +565,7 @@ class BicycleGAN(object):
         
         return (d_loss_real, d_loss_fake)
     
-    def train_ad(self, batch):
+    def train_ad(self, batch): #Train Generator on Discriminator Adversarially
         
         #Save Old Discriminator
         self.GAN.sod()
@@ -619,7 +587,7 @@ class BicycleGAN(object):
         
         return g_loss
     
-    def train_vae(self, batch):
+    def train_vae(self, batch): #Train VAE Model, including KL-Divergence
         
         #Labels And Train Images
         label_data = []
@@ -631,6 +599,7 @@ class BicycleGAN(object):
             train_data_2.append(ImagesB[im_no])
             label_data.append(ImagesB[im_no])
         
+        
         g_loss = self.VAEModel.train_on_batch([np.array(train_data_1), np.array(train_data_2)], np.array(label_data))
         
         #Train KL Divergence
@@ -640,7 +609,7 @@ class BicycleGAN(object):
         
         return (g_loss, g_loss_2)
     
-    def train_zd(self, batch):
+    def train_zd(self, batch): #Train Z Distribution (cLR) Model
         
         #Labels And Train Images
         self.GAN.soe()
@@ -722,11 +691,13 @@ class BicycleGAN(object):
         
         del row1, row2, row3, image, x
         
-    def eval3(self, num):
+    def eval3(self, num): #This is the evaluation function used
         
         row = []
         
         blank = np.zeros([256, 256, 3])
+        
+        #From left to right: Labels, GT, 6xGenerated Images
         
         #With Matching Ground Truth Image
         for _ in range(8):
@@ -756,7 +727,7 @@ class BicycleGAN(object):
         del row, image, x
             
     
-    def save(self, num):
+    def save(self, num): #Save JSON and Weights into /Models/
         gen1_json = self.GAN.G1.to_json()
         dis_json = self.GAN.D.to_json()
         enc_json = self.GAN.E.to_json()
@@ -774,7 +745,7 @@ class BicycleGAN(object):
         self.GAN.D.save_weights("Models/dis"+str(num)+".h5")
         self.GAN.E.save_weights("Models/enc"+str(num)+".h5")
 
-    def load(self, num):
+    def load(self, num): #Load JSON and Weights from /Models/
         steps1 = self.GAN.steps
         
         self.GAN = None
@@ -822,10 +793,12 @@ train_model = False
 while(train_model):
     model.train(4)
     
+    #Evaluate Every 1k Steps
     if model.GAN.steps % 1000 == 0:
         model.eval3(floor(model.GAN.steps / 1000))
 
 
+#Evaluate 100x on loaded model
 for i in range(100):
     model.eval3(i)
 
