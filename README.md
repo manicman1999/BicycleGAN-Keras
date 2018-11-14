@@ -2,6 +2,7 @@
 BicycleGAN Implemented In Keras
 
 Paper: https://papers.nips.cc/paper/6650-toward-multimodal-image-to-image-translation.pdf
+
 Github: https://github.com/junyanz/BicycleGAN
 
 Slight Modifications:
